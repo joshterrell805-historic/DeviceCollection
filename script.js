@@ -15,10 +15,33 @@ var DeviceContainer = new Class({
 		this.span.className = "DeviceContainer";
 		this.span.deviceContainer = this;
 	},
-	// don't need for now devices: [],
+	wrapDevice: function(device){
+		device.wrapper = new Element("span");
+		device.wrapper.handle = device;
+		device.wrapper.className = "DeviceWrapper";
+
+		$(device).inject(device.wrapper);
+	},
 	addDevice: function(device){
-		$(device).inject($(this))
-		// this.devices.push(device);
+		if(this.containsDevice(device)){
+			console.log('attempted to add duplicate device');
+			return;
+		}
+
+		this.wrapDevice(device);
+		(device.wrapper).inject($(this))
+	},
+	addDeviceBefore: function(device, wrapper){
+		this.wrapDevice(device);
+		(device.wrapper).inject(wrapper, 'before');
+	},
+	containsDevice: function (device){
+		var wrappers = $(this).getChildren();
+		for(var i = 0; i < wrappers.length; i++){
+			if(wrappers[i].handle.equals(device))
+				return true;
+		}
+		return false;
 	},
 	containsElement: function(element){
 		var thisSize = $(this).getSize();
@@ -42,6 +65,17 @@ var Device = new Class({
 
 		this.span.className = "Device";
 
+		this.initInnerSpans();
+
+		this.setTopic(options.topic);
+
+		this.drag = new Drag($(this),{
+			onStart:  Device.prototype.onStart.bind(this),
+			onComplete: Device.prototype.onComplete.bind(this),
+			onCancel: Device.prototype.onCancel.bind(this)
+		});
+	},
+	initInnerSpans: function(){
 		this.spanImage = new Element("span");
 		this.spanImage.className = "Device_Image Device_InnerSpan";
 		this.spanImage.inject(this.span);
@@ -53,51 +87,35 @@ var Device = new Class({
 		this.spanSpacing = new Element("span");
 		this.spanSpacing.className = "Device_Spacing Device_InnerSpan";
 		this.spanSpacing.inject(this.span);
-
-		this.wrapper = new Element("span");
-		this.wrapper.className = "DeviceWrapper";
-		this.span.inject(this.wrapper);
-
-		this.setTopic(options.topic);
-
-		this.drag = new Drag($(this),{
-			onStart:  Device.prototype.onStart.bind(this),
-			onComplete: Device.prototype.onComplete.bind(this),
-			onCancel: Device.prototype.onCancel.bind(this),
-			handle: this.span
-		});
-
-		// may need later
-		// $(this).handle = this;
 	},
 	onStart: function(){
-		console.log('on start');
 		deviceDirectory.startDrag(this);
-		$(this).dispose();
+
+		// wrapper is added to device in DeviceContainer.addDevice(device)
+		$(this.wrapper).dispose();
+
 		$(this).setStyle('position', 'absolute');
 		$(this).inject($(document.body));
-
 	},
 	onComplete: function(){
-		console.log('on complete');
+		// no need to "unset" absolute positioning, device is recreated
+
 		myDevices.dropDevice(this);
 		$(this).destroy();
 	},
 	onCancel: function(){
-		console.log('on cancel');
-	},
-	toElement: function(){
-		return this.wrapper;
+		// start never called, no need to do anything
 	},
 	setTopic: function(topic){
 		this.topic = topic;
 		this.spanTitle.set('text', topic);
-		
-
 	},
 	clone: function(){
-		// don't create new options, use reference
+		// clone the visible device but not the underlying device (the options)
 		return new Device(this.options);
+	},
+	equals: function(device){
+		return this.options == device.options;
 	}
 });
 
@@ -108,7 +126,7 @@ var MyDevices = new Class({
 	},
 	dropDevice: function(device){
 		if(this.containsElement($(device.span)))
-		this.addDevice(device.clone());
+			this.addDevice(device.clone());
 	}
 });
 
@@ -119,12 +137,11 @@ var DeviceDirectory = new Class({
 	},
 	startDrag: function(device){
 		var children = $(this).getChildren();
-		var i = children.indexOf($(device));
-		if( i != -1 ){
-			// duplicate child at location, about to be removed
-			var duplicate = device.clone();
-			$(duplicate).inject($(device), 'after')
-		}
+		var i = children.indexOf($(device.wrapper));
+
+		if( i != -1 )
+			// duplicate device at location, about to be removed
+			this.addDeviceBefore(device.clone(), device.wrapper);
 	}
 });
 
