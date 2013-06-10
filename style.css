@@ -1,0 +1,56 @@
+
+#body{
+	margin: 0;
+}
+
+div.page{
+	position: absolute;
+	height: 100%;
+	padding: 15px;
+
+}
+
+span.DeviceContainer{
+	padding: 5px;
+	border: 1px solid black;
+	display: block;
+	height: 40%;
+	overflow-y: auto;
+}
+
+span.DeviceWrapper{
+	display: inline-block;
+
+}
+
+span.Device{
+	padding: 10px;
+	margin: 10px;
+	background-color: gray;
+	display: block;
+}
+	span.Device_InnerSpan{
+		width: 96px;
+		display: block;
+	}
+
+	span.Device_Image{
+		height: 72px;
+		background-color: blue;
+	}
+
+	span.Device_Title{
+		background-color: red;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		-webkit-user-select: none;  
+		-moz-user-select: none;    
+		-ms-user-select: none;      
+		user-select: none;
+	}
+
+	span.Device_Spacing{
+		height: 12px;
+	}
