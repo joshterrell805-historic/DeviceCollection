@@ -145,6 +145,101 @@ var DeviceDirectory = new Class({
 	}
 });
 
+// popluates and loads devices from ifixit.com into deviceContainer
+var DeviceLoader = new Class({
+	initialize: function(deviceContainer){
+		this.deviceContainer = deviceContainer;
+		this.init(this.populate);
+	},
+	init: function(func){
+		if(func == this.populate)
+			this.populate.id = DeviceLoader.prototype.populate.delay(DeviceLoader.populateRate, this);
+		/*
+		this.loadEnableIntervalID = DeviceLoader.prototype.loadEnable.periodical(DeviceLoader.loadEnableRate, this);
+		this.loadIntervalID = DeviceLoader.prototype.load.periodical(DeviceLoader.loadRate, this);
+		*/
+	},
+	clear: function(func){
+		if(func == this.populate)
+			clearTimeout(this.populate.id);
+	},
+	populate: function(){
+
+		if(!this.loading){
+			this.clear(this.populate);
+
+			var topicRequest = new Request.JSONP({
+				url: DeviceLoader.URL_topicsRoot,
+				data: {
+					offset: this.offset,
+					limit: DeviceLoader.populateChunkSize
+				},
+				method: 'get',
+				callbackKey: "jsonp",
+				onFailure: function(xhr){ 
+					console.log('failed to complete Ajax request -- ' + xhr.status + ": " + xhr.statusText);
+				}.bind(this),
+				onException: function(headerName, value){
+					console.log('exception with header -- ' + headerName + ': ' + value);
+				}.bind(this),
+				onComplete: function(data){
+					if(data.length == 0) {
+						this.clear(this.populate);
+						return;
+					}
+
+					console.log('recieved '+ data.length + ' topics.');
+					this.offset += data.length;
+
+					for(var i = 0; i < data.length; i++){
+						var options = data[i];
+						this.deviceContainer.addDevice( new Device(options) );
+					}
+
+					this.init(this.populate);
+				}.bind(this),
+				onTimeout: function(){
+					console.log('timeout');
+				}.bind(this),
+				onRequest: function(url, script){
+					console.log('sending: ' +url);
+				}.bind(this),
+				onCancel: function(){
+					console.log('canceled');
+				}.bind(this)
+			});
+
+			topicRequest.send();
+		}
+	},
+	loadEnable: function(){
+		if(this.doneLoading){
+			$clear(this.loadEnableIntervalID);
+			$clear(this.loadIntervalID);
+			return;
+		}
+
+	},
+	load: function(){
+
+	},
+	updateDevicesToLoad: function(){
+
+	},
+	offset: 0,
+	devicesToLoad: [],
+	donePopulating: false,
+	doneLoading: false,
+	loading: false
+
+});
+DeviceLoader.populateRate = 20;
+DeviceLoader.populateChunkSize = 20;
+DeviceLoader.loadEnableRate = 30;
+DeviceLoader.loadRate = 1;
+DeviceLoader.URL_topicsRoot = "http://www.ifixit.com/api/1.0/topics";
+DeviceLoader.URL_topicRoot = "http://www.ifixit.com/api/1.0/topic";
+DeviceLoader.jsonp = "callback";
 
 constructBody = function(){
 	var body = $(document.body);
@@ -155,10 +250,15 @@ constructBody = function(){
 
 	myDevices = new MyDevices();
 	deviceDirectory = new DeviceDirectory();
+
+	/*
 	for(var i = 0; i < 20; i++){
 		window.deviceDirectory.addDevice(new Device({topic:'name ' + i}));
 	}
+	*/
+
 	$(myDevices).inject(page);
 	$(deviceDirectory).inject(page);
 	page.inject(body);
+	loader = new DeviceLoader(deviceDirectory);
 }
