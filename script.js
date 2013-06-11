@@ -22,7 +22,11 @@ var DeviceContainer = new Class({
 
 		$(device).inject(device.wrapper);
 	},
+	// override in sub-classes
 	addDevice: function(device){
+		console.log("not implemented");
+	},
+	addDeviceToContainer: function(device){
 		if(this.containsDevice(device)){
 			console.log('attempted to add duplicate device');
 			return;
@@ -30,6 +34,7 @@ var DeviceContainer = new Class({
 
 		this.wrapDevice(device);
 		(device.wrapper).inject($(this))
+		return device.wrapper;
 	},
 	addDeviceBefore: function(device, wrapper){
 		this.wrapDevice(device);
@@ -80,13 +85,13 @@ var Device = new Class({
 		this.spanImage.className = "Device_Image Device_InnerSpan";
 		this.spanImage.inject(this.span);
 
-		this.spanTitle = new Element("span");
-		this.spanTitle.className = "Device_Title Device_InnerSpan";
-		this.spanTitle.inject(this.span);
-
 		this.spanSpacing = new Element("span");
 		this.spanSpacing.className = "Device_Spacing Device_InnerSpan";
 		this.spanSpacing.inject(this.span);
+
+		this.spanTitle = new Element("span");
+		this.spanTitle.className = "Device_Title Device_InnerSpan";
+		this.spanTitle.inject(this.span);
 	},
 	onStart: function(){
 		deviceDirectory.startDrag(this);
@@ -124,6 +129,9 @@ var MyDevices = new Class({
 	initialize: function(){
 		this.parent();
 	},
+	addDevice: function(device){
+		this.addDeviceToContainer(device);
+	},
 	dropDevice: function(device){
 		if(this.containsElement($(device.span)))
 			this.addDevice(device.clone());
@@ -132,8 +140,63 @@ var MyDevices = new Class({
 
 var DeviceDirectory = new Class({
 	Extends: DeviceContainer,
-	initialize: function(){
+	initialize: function(deviceLoader){
 		this.parent();
+		this.deviceLoader = deviceLoader;
+		this.deviceLoader.getTotalDevices(function(num){this.totalDevices = num;}.bind(this));
+		this.gotoPage(this.page);
+	},
+	devices: [],
+	page: 0,
+	devicesPerPage: 0,
+	totalPages: null,
+	totalDevices: null,
+	clearPage: function(){
+		var children = $(this).getChildren();
+		for(var i = 0; i < children.length; i++)
+			children[i].dispose();
+	},
+	refresh: function(){
+		this.clearPage();
+
+		var dev = new Device({topic:''});
+		var wrapper = this.addDeviceToContainer(dev);
+		var size = wrapper.getSize();
+		wrapper.destroy();
+
+		var thisSize = $(this).getSize();
+
+		this.devicesPerPage = Math.floor( thisSize.x / size.x ) * Math.floor( thisSize.y / size.y );
+		this.pages = null;
+
+		if(this.totalDevices == null){
+
+			var pass = { handle: this };
+
+			pass.func = function(){
+				if(this.handle.totalDevices != null){
+					this.handle.totalPages = Math.floor(this.handle.totalDevices / this.handle.devicesPerPage);
+					clearTimeout(this.id);
+					console.log(this.handle.totalDevices + " " + this.handle.totalPages);
+				}
+			};
+
+			pass.id = pass.func.periodical( 30, pass );
+		}
+		else{
+			this.totalPages = Math.floor(this.totalDevices / this.devicesPerPage);
+			console.log(this.totalDevices + " " + this.totalPages);
+		}
+	},
+	onResize: function(){
+		this.refresh();
+	},
+	gotoPage: function(page){
+
+
+	},
+	addDevice: function(device){
+		this.addDeviceToContainer(device);
 	},
 	startDrag: function(device){
 		var children = $(this).getChildren();
@@ -147,22 +210,103 @@ var DeviceDirectory = new Class({
 
 // popluates and loads devices from ifixit.com into deviceContainer
 var DeviceLoader = new Class({
-	initialize: function(deviceContainer){
-		this.deviceContainer = deviceContainer;
-		this.init(this.populate);
+	initialize: function(){
 	},
-	init: function(func){
-		if(func == this.populate)
-			this.populate.id = DeviceLoader.prototype.populate.delay(DeviceLoader.populateRate, this);
-		/*
-		this.loadEnableIntervalID = DeviceLoader.prototype.loadEnable.periodical(DeviceLoader.loadEnableRate, this);
-		this.loadIntervalID = DeviceLoader.prototype.load.periodical(DeviceLoader.loadRate, this);
-		*/
+	getDevices: function(start, count, callback, consoleOutput){
+		var topicRequest = new Request.JSONP({
+			url: DeviceLoader.URL_topicsRoot,
+			data: {
+				offset: start,
+				limit: count
+			},
+			method: 'get',
+			callbackKey: "jsonp",
+			onFailure: function(xhr){ 
+				if(consoleOutput)
+					console.log('failed to complete Ajax request -- ' + xhr.status + ": " + xhr.statusText);
+			}.bind(this),
+			onException: function(headerName, value){
+				if(consoleOutput)
+					console.log('exception with header -- ' + headerName + ': ' + value);
+			}.bind(this),
+			onComplete: function(data){
+				var devices = [];
+				for(var i = 0; i < data.length; i++){
+					var options = data[i];
+					devices.push( new Device(options) );
+				}
+				callback(devices);
+			}.bind(this),
+			onTimeout: function(){
+				if(consoleOutput)
+					console.log('timeout');
+			}.bind(this),
+			onRequest: function(url, script){
+				if(consoleOutput)
+					console.log('sending: ' + url);
+			}.bind(this),
+			onCancel: function(){
+				if(consoleOutput)
+					console.log('canceled');
+			}.bind(this)
+		});
+		topicRequest.send();
 	},
-	clear: function(func){
-		if(func == this.populate)
-			clearTimeout(this.populate.id);
-	},
+	getTotalDevices: function(callback){
+		var v = function(devices){
+			// still haven't found end of list
+			if(this.breakIndex == -1){
+				// found end of list
+				if(devices.length == 0){
+					this.breakIndex = this.lastIndex;
+					this.step = (this.breakIndex + 1)/4;
+
+					if(this.breakIndex < 2){
+						this.callback(this.breakIndex);
+					}
+					else{
+						this.lastIndex += this.dir * this.step;
+						this.loader.getDevices(this.lastIndex, 1, v.bind(this), this.log);
+					}
+				}
+				else{
+					this.lastIndex = Math.pow(2, this.power++) - 1;
+					this.loader.getDevices( this.lastIndex, 1, v.bind(this), this.log);
+				}
+			}
+			else{
+				if(this.step != 1){
+					this.dir = devices.length != 0? 1 : -1;
+					this.lastIndex += this.dir * this.step;
+					this.step /= 2;
+					this.loader.getDevices(this.lastIndex, 1, v.bind(this), this.log);
+				}
+				else{
+					this.lastIndex += this.dir;
+					this.loader.getDevices(this.lastIndex, 1, function(devices){
+						// if exists
+						if( devices.length != 0 )
+							this.callback(this.lastIndex + 1);
+						else
+							this.callback(this.lastIndex);
+					}.bind(this),
+					this.log);
+				}
+			}
+		}
+		var data = {
+			callback: callback,
+			dir: -1,
+			lastIndex: 0,
+			breakIndex: -1,
+			step: -1,
+			power: 1,
+			loader: this,
+			log: false
+		};
+		this.getDevices(data.lastIndex,1,v.bind(data),data.log);
+	}
+	/*
 	populate: function(){
 
 		if(!this.loading){
@@ -231,6 +375,7 @@ var DeviceLoader = new Class({
 	donePopulating: false,
 	doneLoading: false,
 	loading: false
+	*/
 
 });
 DeviceLoader.populateRate = 20;
@@ -249,7 +394,8 @@ constructBody = function(){
 	page.className = "page";
 
 	myDevices = new MyDevices();
-	deviceDirectory = new DeviceDirectory();
+	var loader = new DeviceLoader();
+	deviceDirectory = new DeviceDirectory(loader);
 
 	/*
 	for(var i = 0; i < 20; i++){
@@ -260,5 +406,6 @@ constructBody = function(){
 	$(myDevices).inject(page);
 	$(deviceDirectory).inject(page);
 	page.inject(body);
-	loader = new DeviceLoader(deviceDirectory);
+	deviceDirectory.refresh();
+	window.addEvent('resize', DeviceDirectory.prototype.refresh.bind(deviceDirectory));
 }
