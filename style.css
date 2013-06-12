@@ -11,6 +11,7 @@ div.page{
 	text-align: center;
 }
 
+
 span.DeviceContainer{
 	border: 1px solid black;
 	display: inline-block;
@@ -18,6 +19,9 @@ span.DeviceContainer{
 	height: 45%;
 	overflow-y: auto;
 	text-align: justify;
+}
+#DeviceDirectory{
+	overflow: hidden;
 }
 
 span.DeviceWrapper{
@@ -27,8 +31,10 @@ span.DeviceWrapper{
 span.Device{
 	padding: 10px;
 	margin: 10px;
-	background-color: gray;
 	display: block;
+	border: 1px solid #CCCCCC;
+	background-color: #F7F7F7;
+	text-align: center;
 }
 	span.Device_InnerSpan{
 		width: 96px;
@@ -37,12 +43,17 @@ span.Device{
 
 	span.Device_Image{
 		height: 72px;
-		background-color: blue;
+		text-align: center;
 	}
+		span.Device_NoImage{
+			font-style: italic;
+			font-size: 60%;
+			line-height: 72px;
+		}
 
 	span.Device_Title{
-		background-color: red;
 		text-align: center;
+		font-size: 70%;
 		height: 1.5em;
 		line-height: 1.5em;
 		white-space: nowrap;
@@ -56,4 +67,22 @@ span.Device{
 
 	span.Device_Spacing{
 		height: 12px;
+	}
+
+span.PageBrowser{
+	display: inline-block;
+	width: 95%;
+}
+	#jumpSpan{
+		float: left;
+	}
+	#pageOfAndNextPrev{
+		float: right;
+	}
+	#jumpSpan, #pageOfAndNextPrev{
+		display: inline-block;
+
+	}
+	#pageOf, #nextPrev{
+		display: block;
 	}
