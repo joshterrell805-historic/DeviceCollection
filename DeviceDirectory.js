@@ -9,7 +9,6 @@ var DeviceDirectory = new Class({
 	},
 	// which device to follow on screen resize(top left device of screen)?
 	followDeviceIndex: 0,
-	devices: [],
 	page: 0,
 	devicesPerPage: 0,
 	totalPages: null,
@@ -26,42 +25,16 @@ var DeviceDirectory = new Class({
 			var pass = {handle: this, device: device};
 
 			pass.func = function(image){
-				this.device.setImage(image);
 				this.handle.loadImages();
-
-				// if moved device to bag during load, the device is now a cloned device and the device in myDevices will not have the image
-				// find all instances of device in myDevices and deviceDirectory and set image
-
-				var children = $(deviceDirectory).getChildren();
-
-				// can't use index of because of comparison method. manual search
-				for( var i = 0; i < children.length; i++){
-					var dev = children[i].handle;
-					if(dev === device)
-						continue;
-					if(dev.equals(this.device))
-						dev.setImage(image);
-				}
-				
-				var children = $(myDevices).getChildren();
-
-				for( var i = 0; i < children.length; i++){
-					var dev = children[i].handle;
-					if(dev === device)
-						continue;
-					if(dev.equals(this.device))
-						dev.setImage(image);
-				}
-
 			}.bind(pass);
 
-			this.deviceLoader.loadImage(device.options.topic, pass.func, false);
+			this.deviceLoader.loadImage(device.options.index, pass.func, false);
 		}
 	},
 	refresh: function(){
 
 		// calculate devices per page 
-		var dev = new Device({topic:''});
+		var dev = new Device({topic:'measure'});
 		var wrapper = this.addDeviceToContainer(dev);
 		var size = wrapper.getSize();
 		wrapper.destroy();
@@ -100,86 +73,6 @@ var DeviceDirectory = new Class({
 	onResize: function(){
 		this.refresh();
 	},
-	displayDevices: function( startIndex, count ){
-
-		var PageDeviceMap = new Class({
-			initialize: function(deviceIndex, pageIndex){
-				this.deviceIndex = deviceIndex;
-				this.pageIndex = pageIndex;
-			}
-		});
-
-		var devicesToLoad = [];
-
-		// on the last page, there may not exist the requested 'count' amount of devices
-		// adjust count accordingly
-		if(this.totalDevices != null && this.totalPages != null && this.page == this.totalPages - 1){
-			count = this.totalDevices - startIndex - 1;
-		}
-
-		for(var i = 0; i < count; i++){
-			var index = startIndex + i;
-			if( this.devices[index] === undefined )
-				devicesToLoad.push(new PageDeviceMap(index, i));
-		}
-
-		// compute blocks in order to download needed devices in as few requests as possible
-		var blocks = [];
-		for(var i = 0; i < devicesToLoad.length; i++){
-			if (i == 0){
-				blocks[0] = [devicesToLoad[0]];
-				continue;
-			}
-			// if the this unloaded devices comes directly after the last one
-			if( devicesToLoad[i].pageIndex == devicesToLoad[i-1].pageIndex + 1 ){
-				// add this unloaded device to the current block 
-				blocks[blocks.length-1].push( devicesToLoad[i] );
-			}
-			// start a new block, the devices aren't adjacent
-			else{
-				blocks[blocks.length] = [devicesToLoad[i]];
-			}
-		}
-
-		// download devices
-		var requestsToGo = {count: blocks.length};
-		for(var i = 0; i < blocks.length; i++){
-			var pass = {handle: this, requestsToGo: requestsToGo, blocks: blocks, thisBlock: i};
-
-			pass.func = function(devices){
-				var block = this.blocks[this.thisBlock];
-				
-				for(var j = 0; j < devices.length; j++)
-					this.handle.devices[ block[j].deviceIndex ] = devices[j];
-
-				if(--this.requestsToGo.count == 0)
-					this.handle.doneLoadingDevices();
-
-			}.bind(pass);
-
-			var si= blocks[i][0].deviceIndex;
-			var c= blocks[i].length;
-
-			this.deviceLoader.getDevices(si, c, pass.func, false);
-		}
-
-		// didn't have to download any devices. If had to download, this method is called again
-		if(blocks.length == 0){
-			this.devicesWithoutImages = [];
-			for(var i = 0; i < count; i++){
-				var device = this.devices[i + startIndex];
-				this.addDevice(device);
-
-				if(device.options.image === undefined)
-					this.devicesWithoutImages.push(device);
-			}
-			this.loadImages();
-		}
-	},
-	doneLoadingDevices: function(){
-		// the page may have changed, window been resized, etc..
-		this.gotoPage(this.page);
-	},
 	nextPage: function(){
 		this.gotoPage(this.page + 1);
 	},
@@ -216,7 +109,23 @@ var DeviceDirectory = new Class({
 		this.pageBrowser.setPage(this.page+1);
 		this.followDeviceIndex = this.page * this.devicesPerPage;
 
-		this.displayDevices(this.page * this.devicesPerPage, this.devicesPerPage);
+		var startIndex = this.page*this.devicesPerPage;
+		var count = this.devicesPerPage;
+
+		this.deviceLoader.getDevices( startIndex, count, this.displayDevices.bind(this));
+	},
+	displayDevices: function(devices){
+		this.devicesWithoutImages = [];
+
+		for(var i = 0; i < devices.length; i++){
+			var device = devices[i];
+			this.addDevice(device);
+
+			if(device.options.image === undefined)
+				this.devicesWithoutImages.push(device);
+		}
+	
+		this.loadImages();
 	},
 	isPageValid: function(){
 		// the page has already been set, but may have been set to a page higher than the highest possible page
@@ -241,12 +150,7 @@ var DeviceDirectory = new Class({
 		{
 			var clone = device.clone();
 
-			var devIndex = this.devices.indexOf( device );
-			if(devIndex == -1)
-				console.log('Error: DeviceDirectory.startDrag -- device doesn\'t exist within this.devices yet was found in dom');
-			else
-				this.devices[devIndex] = clone;
-				
+			this.deviceLoader.replaceDevice(clone);
 			this.addDeviceBefore(clone, device.wrapper);
 		}
 	}

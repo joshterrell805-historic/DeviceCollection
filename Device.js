@@ -46,6 +46,7 @@ var Device = new Class({
 		this.spanTitle.inject(this.span);
 	},
 	setImage: function(image){
+		//console.log(this.options.topic);
 		if(image === undefined)
 			return;
 		this.options.image = image;
@@ -63,6 +64,7 @@ var Device = new Class({
 
 	},
 	onStart: function(){
+		myDevices.startDrag(this);
 		deviceDirectory.startDrag(this);
 
 		$(this.wrapper).dispose();

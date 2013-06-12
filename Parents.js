@@ -20,7 +20,7 @@ var DeviceContainer = new Class({
 	addDeviceToContainer: function(device){
 		if(this.containsDevice(device)){
 			console.log('attempted to add duplicate device');
-			return;
+			return ;
 		}
 
 		var wrapper = device.wrapDevice();
@@ -32,10 +32,23 @@ var DeviceContainer = new Class({
 		var devWrapper = device.wrapDevice();
 		devWrapper.inject(wrapper, 'before');
 	},
-	containsDevice: function (device){
+	deviceContainerIndex: function(device){
 		var wrappers = $(this).getChildren();
 		for(var i = 0; i < wrappers.length; i++){
 			if(wrappers[i].handle.equals(device))
+				return i;
+		}
+		return -1;
+	},
+	containsDevice: function (device){
+		if(this.deviceContainerIndex(device) > -1 )
+			return true;
+		return false;
+	},
+	containsWrapper: function(wrapper){
+		var wrappers = $(this).getChildren();
+		for(var i = 0; i < wrappers.length; i ++){
+			if(wrappers[i] === wrapper)
 				return true;
 		}
 		return false;
