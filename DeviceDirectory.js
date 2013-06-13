@@ -33,11 +33,7 @@ var DeviceDirectory = new Class({
 	},
 	refresh: function(){
 		// calculate devices per page 
-		var dev = new Device({topic:'measure'});
-		var wrapper = this.addDeviceToContainer(dev);
-		var size = wrapper.getSize();
-		wrapper.destroy();
-
+		var size = getDeviceSize();
 		var thisSize = $(this).getSize();
 
 		var devicesPer = {x: Math.floor( thisSize.x / size.x),

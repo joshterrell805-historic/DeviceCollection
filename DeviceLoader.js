@@ -48,6 +48,66 @@ var DeviceLoader = new Class({
 		}
 		return false;
 	},
+	executeOnAllDeviceInstances: function(device, func, pass){
+		var bPass = false;
+
+		if(pass !== undefined)
+			bPass = true;
+
+		if(bPass)
+			func.bind(device, pass)();
+		else
+			func.bind(device)();
+
+		for(var i = 0; i < this.devices.length; i++){
+			var dev = this.devices[i];
+			if(dev === undefined)
+				continue;
+			if(dev === device)
+				continue;
+			if(dev.equals(device)){
+				if(bPass)
+					func.bind(device, pass)();
+				else
+					func.bind(device)();
+			}
+
+		}
+		if(window.draggedDevice !== undefined && window.draggedDevice.handle !== device && window.draggedDevice.handle.equals(device)){
+			if(bPass)
+				func.bind(draggedDevice.handle, pass)();
+			else
+				func.bind(draggedDevice.handle)();
+		}
+
+		children = $(deviceDirectory).getChildren();
+		for( var i = 0; i < children.length; i++){
+			var dev = children[i].handle;
+			if(dev === device)
+				continue;
+			if(dev.equals(device)){
+				if(bPass){
+					func.bind(dev, pass)();
+				}
+				else
+					func.bind(dev)();
+			}
+		}
+
+		children = $(myDevices).getChildren();
+		for( var i = 0; i < children.length; i++){
+			var dev = children[i].handle;
+			if(dev === device)
+				continue;
+			if(dev.equals(device)){
+				if(bPass)
+					func.bind(dev, pass)();
+				else
+					func.bind(dev)();
+			}
+		}
+
+	},
 	// callback has signature function( image )
 	// image is the loaded image Element
 	loadImage: function(index, callback){
@@ -66,7 +126,9 @@ var DeviceLoader = new Class({
 			return;
 		}
 
-		this.devices[index].loadingImage();
+		this.executeOnAllDeviceInstances( this.devices[index], Device.prototype.loadingImage );
+
+		//console.log("Request topic: " + index);
 		
 		var topicRequest = new Request.JSONP({
 			url: DeviceLoader.URL_topicRoot + "/" + topic,
@@ -81,31 +143,11 @@ var DeviceLoader = new Class({
 					console.log('exception with header -- ' + headerName + ': ' + value);
 			}.bind(this),
 			onComplete: function(data){
+				//console.log("Downloaded topic: " + index);
 				DeviceLoader.prototype._downloadImage.bind(this)(data, function(image){
+					//console.log("Downloaded image: " + index);
 					var device = this.devices[index];
-					device.setImage(image);
-
-					// find all instances of device in myDevices and deviceDirectory and set image
-					var children = $(deviceDirectory).getChildren();
-
-					for( var i = 0; i < children.length; i++){
-						var dev = children[i].handle;
-						if(dev === device)
-							continue;
-						if(dev.equals(device))
-							dev.setImage(image);
-					}
-					
-					children = $(myDevices).getChildren();
-
-					for( var i = 0; i < children.length; i++){
-						var dev = children[i].handle;
-						if(dev === device)
-							continue;
-						if(dev.equals(device))
-							dev.setImage(image);
-					}
-
+					this.executeOnAllDeviceInstances(device, Device.prototype.setImage, image);
 					callback(image);
 				}.bind(this));
 			}.bind(this),
@@ -168,6 +210,8 @@ var DeviceLoader = new Class({
 			return;
 		}
 
+		//console.log("Request Devices: " + devicesToLoad );
+
 		// compute blocks in order to download needed devices in as few requests as possible
 		var blocks = [];
 		for(var i = 0; i < devicesToLoad.length; i++){
@@ -195,13 +239,19 @@ var DeviceLoader = new Class({
 			pass.func = function(devices){
 				var block = this.blocks[this.thisBlock];
 				
+				//var downloaded = []
+
 				for(var j = 0; j < devices.length; j++){
 					// in case two calls to load device before device gets downloaded (actually happens!)
 					if(this.handle.devices[block[j]] !== undefined)
 						continue;
+					//downloaded.push(block[j]);
 					devices[j].options.index = block[j];
 					this.handle.devices[ block[j] ] = devices[j];
 				}
+
+				//if(downloaded.length != 0)
+				//	console.log("Downloaded Devices: " + downloaded);
 
 				if(--this.requestsToGo.count == 0)
 					this.handle._returnDevices(start, count, callback);

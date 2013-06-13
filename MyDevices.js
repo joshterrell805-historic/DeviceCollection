@@ -19,14 +19,14 @@ var MyDevices = new Class({
 						console.log('Stored device could not be found.\n\tDeviceTopic: ' + this.databaseDevices[this.index].topic + '\n\tDeviceIndex: ' + this.databaseDevices[this.index].deviceIndex);
 					}
 					else{
-						this.loadedDevices[this.index] = device.clone();
+						this.loadedDevices[this.index] = device;
 					}
 					if( --this.devicesToGo.value == 0 ){
 						for(var i = 0; i < this.loadedDevices.length; i++){
 							dev = this.loadedDevices[i];
 							if(dev === undefined)
 								continue;
-							this.handle.addDevice(dev, false);
+							this.handle.addDevice(dev.clone(), false);
 							this.handle.deviceLoader.loadImage(dev.options.index, function(){});
 						}
 					}

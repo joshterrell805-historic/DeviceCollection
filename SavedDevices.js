@@ -12,6 +12,7 @@ var unescapeString =  function(string){
 SavedDevices = new Class({ initialize: function(){
 		this.openDatabase(SavedDevices.dbOptions);
 	},
+	logRequestsSQLCallsOnConsole: false,
 	openDatabase: function(options){
 		this.database = openDatabase(options.name, options.version, options.description, options.estimatedSize);
 		//this._dropTable();
@@ -88,7 +89,8 @@ SavedDevices = new Class({ initialize: function(){
 		this._real_execute(options);
 	},
 	_real_execute: function(options){
-		console.log(options.query);
+		if(this.logSQLCallsOnConsole)
+			console.log(options.query);
 		this.database.transaction( function(tx){
 			tx.executeSql(options.query, [], function(tx, results){
 				options.callback(results);

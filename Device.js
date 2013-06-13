@@ -3,12 +3,42 @@ var Device = new Class({
 	setOptions: function(options){
 		this.options = options;
 		this.spanTitle.set('text', options.topic);
+
+
+		var title = this.options.topic;
+		if(Device.tips === undefined)
+			Device.tips = new FloatingTips($(this), {
+				content: function(elm){ 
+					var text = elm.handle.options.topic;
+			
+			/*
+					if(elm.handle.options.categories.length != 0)
+						text += " Categories: ";
+			
+					for(var i = 0; i < elm.handle.options.categories.length; i++){
+			
+						text += elm.handle.options.categories[i];
+			
+						if(i != elm.handle.options.categories.length - 1)
+							text += ", ";
+					}
+					*/
+
+					return text;
+				}
+				//text: function(){return "categories";},
+			});
+		else
+			Device.tips.attach($(this));
+
+
 		this.setImage(this.options.image);
 	},
 	initialize: function(options){
 		this.parent();
 
 		this.span.className = "Device";
+		this.span.handle = this;
 
 		this.initInnerSpans();
 
@@ -46,7 +76,6 @@ var Device = new Class({
 		this.spanTitle.inject(this.span);
 	},
 	setImage: function(image){
-		//console.log(this.options.topic);
 		if(image === undefined)
 			return;
 		this.options.image = image;
@@ -60,6 +89,10 @@ var Device = new Class({
 			$(this.spanImage.text).className = "Device_NoImage";
 		}
 		else{
+
+			if(this.spanImage.image != null && this.spanImage.image.src == image.src)
+				return;
+
 			if(this.spanImage.text != null){
 				$(this.spanImage.text).destroy();
 				this.spanImage.text = null;
@@ -93,12 +126,15 @@ var Device = new Class({
 
 		$(this).setStyle('position', 'absolute');
 		$(this).inject($(document.body));
+		window.draggedDevice = $(this);
 	},
 	onComplete: function(){
 		// no need to "unset" absolute positioning, device is recreated
 
 		myDevices.dropDevice(this);
+		Device.tips.detach($(this));
 		$(this).destroy();
+		window.draggedDevice = undefined;
 	},
 	onCancel: function(){
 		// start never called, no need to do anything

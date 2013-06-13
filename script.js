@@ -167,7 +167,7 @@ var resize = function(){
 
 var getDeviceSize = function(){
 	if(getDeviceSize.size == undefined){
-		var dev = new Device({topic:'Measure'});
+		var dev = new Device({topic:'Measure', categories: []});
 		var wrapper = deviceDirectory.addDeviceToContainer(dev);
 		getDeviceSize.size = wrapper.getSize();
 		wrapper.destroy();
