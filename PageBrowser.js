@@ -20,10 +20,7 @@ var PageBrowser = new Class({
 	initInnerElements: function(){
 		var jumpSpan = new Span();
 		$(jumpSpan).id = 'jumpSpan';
-		jumpSpan.input = new Element("input",{
-			type: 'number'
-		});
-		this.pageInput = jumpSpan.input;
+
 		jumpSpan.button = new Element("input",{
 			type: 'button',
 			value: 'Jump',
@@ -33,6 +30,18 @@ var PageBrowser = new Class({
 				}.bind(this)
 			}
 		});
+
+		jumpSpan.input = new Element("input",{
+			type: 'number',
+			events: {
+				keypress: function(e){
+					if(e.key == "enter")
+						this.fireEvent('click');
+				}.bind(jumpSpan.button)
+			}
+		});
+
+		this.pageInput = jumpSpan.input;
 
 		$(jumpSpan.input).inject($(jumpSpan));
 		$(jumpSpan.button).inject($(jumpSpan));

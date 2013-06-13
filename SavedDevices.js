@@ -12,7 +12,7 @@ var unescapeString =  function(string){
 SavedDevices = new Class({ initialize: function(){
 		this.openDatabase(SavedDevices.dbOptions);
 	},
-	logRequestsSQLCallsOnConsole: false,
+	logSQLCallsOnConsole: true,
 	openDatabase: function(options){
 		this.database = openDatabase(options.name, options.version, options.description, options.estimatedSize);
 		//this._dropTable();
@@ -89,7 +89,7 @@ SavedDevices = new Class({ initialize: function(){
 		this._real_execute(options);
 	},
 	_real_execute: function(options){
-		if(this.logSQLCallsOnConsole)
+		if(this.logSQLCallsOnConsole === true)
 			console.log(options.query);
 		this.database.transaction( function(tx){
 			tx.executeSql(options.query, [], function(tx, results){
@@ -128,6 +128,16 @@ SavedDevices = new Class({ initialize: function(){
 				' VALUES (\'' + escapeString(topic) + '\', ' + containerIndex + ', ' + deviceIndex + ')',
 			callback: null
 		};
+		this._execute(options);
+	},
+	updateDeviceIndex: function(topic, deviceIndex){
+		var options = {
+			query: 'UPDATE ' + SavedDevices.table.name + ' SET ' + 
+				SavedDevices.table.cols[2].name + '=' + deviceIndex + ' WHERE ' +
+				SavedDevices.table.cols[0].name + '=\'' + escapeString(topic) + '\'',
+			callback: null
+		}
+
 		this._execute(options);
 	},
 	_decrementContainerIndex: function(containerIndex, pass){

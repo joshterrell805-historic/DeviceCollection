@@ -19,6 +19,7 @@ var MyDevices = new Class({
 						console.log('Stored device could not be found.\n\tDeviceTopic: ' + this.databaseDevices[this.index].topic + '\n\tDeviceIndex: ' + this.databaseDevices[this.index].deviceIndex);
 					}
 					else{
+
 						this.loadedDevices[this.index] = device;
 					}
 					if( --this.devicesToGo.value == 0 ){
@@ -26,7 +27,14 @@ var MyDevices = new Class({
 							dev = this.loadedDevices[i];
 							if(dev === undefined)
 								continue;
+
+							if(this.databaseDevices[this.index].deviceIndex != dev.options.index){
+								//console.log("Device has changed index since last visit: " + dev.options.topic + '\n\told index: ' + this.databaseDevices[this.index].deviceIndex +'\n\tnew index: ' + dev.options.index + '\n\tFixing local database..');
+								this.handle.database.updateDeviceIndex(dev.options.topic, dev.options.index);
+							}
+
 							this.handle.addDevice(dev.clone(), false);
+
 							this.handle.deviceLoader.loadImage(dev.options.index, function(){});
 						}
 					}
@@ -77,7 +85,7 @@ var MyDevices = new Class({
 		index = this.deviceContainerIndex(device);
 
 		if(index > -1)
-			this.database.addDevice(device.options.topic, index, device.options.index);
+			this.database.addDevice(device.options.topic, index, device.options.index + 1);
 		else
 			console.log('Error: MyDevices.addDevice -- added device but couldn\'t find index in parent');
 	},

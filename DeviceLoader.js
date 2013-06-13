@@ -4,7 +4,7 @@ var DeviceLoader = new Class({
 	initialize: function(){
 		this._getTotalDevices();
 	},
-	consoleoutput: false,
+	consoleOutput: false,
 	devices: [],
 	totalDevices: null,
 	// returns undefined if no device
@@ -128,11 +128,28 @@ var DeviceLoader = new Class({
 
 		this.executeOnAllDeviceInstances( this.devices[index], Device.prototype.loadingImage );
 
-		//console.log("Request topic: " + index);
+		this._downloadTopic(topic, index, function(data){
+			if(data === null){
+				console.log('Failed to download topic: ' + index);
+			}
+			else{
+				this._downloadImage(data, function(image){
+					var device = this.devices[index];
+					this.executeOnAllDeviceInstances(device, Device.prototype.setImage, image);
+					callback(image);
+				}.bind(this));
+			}
+		}.bind(this));
+	},
+	_downloadTopic: function(topic, index, callback, timeoutObj){
+
+		if(timeoutObj === undefined)
+			timeoutObj = {topicRequest: null, handle: this, remainingRetries: DeviceLoader.downloadTopicTimeoutRetry, index: index, callback: callback};
 		
 		var topicRequest = new Request.JSONP({
 			url: DeviceLoader.URL_topicRoot + "/" + topic,
 			method: 'get',
+			timeout: DeviceLoader.downloadTopicTimeout,
 			callbackKey: "jsonp",
 			onFailure: function(xhr){ 
 				if(this.consoleOutput)
@@ -143,18 +160,18 @@ var DeviceLoader = new Class({
 					console.log('exception with header -- ' + headerName + ': ' + value);
 			}.bind(this),
 			onComplete: function(data){
-				//console.log("Downloaded topic: " + index);
-				DeviceLoader.prototype._downloadImage.bind(this)(data, function(image){
-					//console.log("Downloaded image: " + index);
-					var device = this.devices[index];
-					this.executeOnAllDeviceInstances(device, Device.prototype.setImage, image);
-					callback(image);
-				}.bind(this));
+				callback(data);
 			}.bind(this),
 			onTimeout: function(){
-				if(this.consoleOutput)
-					console.log('timeout');
-			}.bind(this),
+				//if(this.handle.consoleOutput){
+				if(true){
+					console.log('Retrying topic download ' + index);
+				}
+				if(--this.remainingRetries == 0)
+					this.callback(null);
+				else
+					this.handle._downloadTopic(this.startIndex, this.count, this.callback, this);
+			}.bind(timeoutObj),
 			onRequest: function(url, script){
 				if(this.consoleOutput)
 					console.log('sending: ' + url);
@@ -175,11 +192,23 @@ var DeviceLoader = new Class({
 				return;
 			}
 
+			console.log('looking for device: ' + topic + " not at index: " + index);
+
 			var func = function(devices){
+				if(this.found.value === true)
+					return;
+
+				//console.log('check indicies ' + this.start + 
+
 				for(var i = 0; i < devices.length; i++){
 					var dev = devices[i];
-					if(dev.options.topic == topic)
+					console.log('checking: ' + dev.options.topic);
+					if(dev.options.topic == topic){
+						this.found.value = true;
+						console.log('found: ' + topic);
 						callback(dev);
+						return;
+					}
 				}
 				if(--this.calls.value == 0)
 					callback(null);
@@ -187,13 +216,77 @@ var DeviceLoader = new Class({
 
 			var span = 20;
 			var calls = {value: 2};
-			var pass = {calls: calls, start: index - span, count: span, topic: topic, index: index, callback: callback};
+			var found = {value: false};
+			var pass = {found: found, calls: calls, start: index - span, count: span, topic: topic, index: index, callback: callback};
+			if(pass.start < 0)
+				pass.start = 0;
 			this.getDevices(pass.start, pass.count, func.bind(pass));
 
-			var pass = {calls: calls, start: index + 1, count: span, topic: topic, index: index, callback: callback};
+			var pass = {found: found, calls: calls, start: index + 1, count: span, topic: topic, index: index, callback: callback};
+			if(pass.start < 0)
+				pass.start = 0;
 			this.getDevices(pass.start, pass.count, func.bind(pass));
 
 		}.bind(this));
+	},
+	_getDevices: function(blocks){
+		if(this._getDevices.queue === undefined){
+			this._getDevices.queue = [];
+			this._getDevices.downloading = false;
+			this._getDevices.checkQueue = function(){
+				if(!this._getDevices.downloading && this._getDevices.queue.length != 0){
+					this._getDevices.downloading = true;
+					var blocks = this._getDevices.queue.splice(0,1)[0];
+					this._realGetDevices(blocks);
+				}
+			}.bind(this);
+		}
+
+		this._getDevices.queue.push(blocks);
+		this._getDevices.checkQueue();
+
+	},
+	_realGetDevices: function(blocks){
+		var requestsToGo = {count: blocks.length};
+
+		// download all blocks (up to DeviceDirectory.devicesPerPage)
+		for(var i = 0; i < blocks.length; i++){
+			var pass = {handle: this, requestsToGo: requestsToGo, blocks: blocks, thisBlock: i};
+
+			pass.func = function(devices){
+				var block = this.blocks[this.thisBlock];
+				if(devices === null){
+					if(this.handle.consoleOutput);
+						console.log('Failed to download devices ' + block[0] + ' through ' + block[block.length-1]);
+				}
+				else{
+					
+					//var downloaded = []
+
+					for(var j = 0; j < devices.length; j++){
+						// in case two calls to load device before device gets downloaded (actually happens!)
+						if(this.handle.devices[block[j]] !== undefined)
+							continue;
+						//downloaded.push(block[j]);
+						devices[j].options.index = block[j];
+						this.handle.devices[ block[j] ] = devices[j];
+					}
+
+					//if(downloaded.length != 0)
+					//	console.log("Downloaded Devices: " + downloaded);
+				}
+
+				if(--this.requestsToGo.count == 0){
+					this.handle._getDevices.downloading = false;
+					this.handle._returnDevices(blocks.start, blocks.count, blocks.callback);
+					this.handle._getDevices.checkQueue();
+				}
+			}.bind(pass);
+
+			var si= blocks[i][0];
+			var c= blocks[i].length;
+			this._downloadDevices(si, c, pass.func);
+		}
 	},
 	getDevices: function(start, count, callback){
 
@@ -230,44 +323,20 @@ var DeviceLoader = new Class({
 			}
 		}
 
-
-		// download devices
-		var requestsToGo = {count: blocks.length};
-		for(var i = 0; i < blocks.length; i++){
-			var pass = {handle: this, requestsToGo: requestsToGo, blocks: blocks, thisBlock: i};
-
-			pass.func = function(devices){
-				var block = this.blocks[this.thisBlock];
-				
-				//var downloaded = []
-
-				for(var j = 0; j < devices.length; j++){
-					// in case two calls to load device before device gets downloaded (actually happens!)
-					if(this.handle.devices[block[j]] !== undefined)
-						continue;
-					//downloaded.push(block[j]);
-					devices[j].options.index = block[j];
-					this.handle.devices[ block[j] ] = devices[j];
-				}
-
-				//if(downloaded.length != 0)
-				//	console.log("Downloaded Devices: " + downloaded);
-
-				if(--this.requestsToGo.count == 0)
-					this.handle._returnDevices(start, count, callback);
-
-			}.bind(pass);
-
-			var si= blocks[i][0];
-			var c= blocks[i].length;
-
-			this._downloadDevices(si, c, pass.func);
-		}
+		// add to queue so that only one set of devices is downloading at a time
+		// (actually speeds up application a lot!)
+		blocks.start = start;
+		blocks.count = count;
+		blocks.callback = callback;
+		this._getDevices(blocks);
 	},
 	_returnDevices: function(start, count, callback){
 		callback(this.devices.slice(start, start + count));
 	},
-	_downloadDevices: function(startIndex, count, callback){
+	_downloadDevices: function(startIndex, count, callback, timeoutObj){
+		if(timeoutObj === undefined)
+			timeoutObj = {topicRequest: null, handle: this, remainingRetries: DeviceLoader.downloadDevicesTimeoutRetry, startIndex: startIndex, count: count, callback: callback};
+
 
 		var topicRequest = new Request.JSONP({
 			url: DeviceLoader.URL_topicsRoot,
@@ -276,10 +345,23 @@ var DeviceLoader = new Class({
 				limit: count
 			},
 			method: 'get',
+			timeout: DeviceLoader.downloadDevicesTimeout,
 			callbackKey: "jsonp",
+			onTimeout: function(){
+				//if(this.handle.consoleOutput){
+					if(true){
+					var end = this.startIndex + this.count;
+					console.log('Retrying download ' + this.startIndex + " through " + end);
+				}
+				if(--this.remainingRetries == 0)
+					this.callback(null);
+				else
+					this.handle._downloadDevices(this.startIndex, this.count, this.callback, this);
+			}.bind(timeoutObj),
 			onFailure: function(xhr){ 
 				if(this.consoleOutput)
-					console.log('failed to complete Ajax request -- ' + xhr.status + ": " + xhr.statusText);
+
+					console.log('failed to complete Ajax request -- '+ xhr.statusText);
 			}.bind(this),
 			onException: function(headerName, value){
 				if(this.consoleOutput)
@@ -293,10 +375,6 @@ var DeviceLoader = new Class({
 				}
 				callback(devices);
 			}.bind(this),
-			onTimeout: function(){
-				if(this.consoleOutput)
-					console.log('timeout');
-			}.bind(this),
 			onRequest: function(url, script){
 				if(this.consoleOutput)
 					console.log('sending: ' + url);
@@ -306,6 +384,9 @@ var DeviceLoader = new Class({
 					console.log('canceled');
 			}.bind(this)
 		});
+
+		timeoutObj.topicRequest = topicRequest;
+
 		topicRequest.send();
 	},
 	_getTotalDevices: function(){
@@ -387,3 +468,7 @@ DeviceLoader.checkDone = 10;
 DeviceLoader.URL_topicsRoot = "http://www.ifixit.com/api/1.0/topics";
 DeviceLoader.URL_topicRoot = "http://www.ifixit.com/api/1.0/topic";
 DeviceLoader.jsonp = "callback";
+DeviceLoader.downloadDevicesTimeout = 2000;
+DeviceLoader.downloadDevicesTimeoutRetry = 5;
+DeviceLoader.downloadTopicTimeout = 1500;
+DeviceLoader.downloadTopicTimeoutRetry = 5;
