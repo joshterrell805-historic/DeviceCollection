@@ -12,7 +12,7 @@ var unescapeString =  function(string){
 SavedDevices = new Class({ initialize: function(){
 		this.openDatabase(SavedDevices.dbOptions);
 	},
-	logSQLCallsOnConsole: true,
+	logSQLCallsOnConsole: false,
 	openDatabase: function(options){
 		this.database = openDatabase(options.name, options.version, options.description, options.estimatedSize);
 		//this._dropTable();
@@ -81,8 +81,12 @@ SavedDevices = new Class({ initialize: function(){
 
 		}
 		// queue length is zero, nothing to do, go home
-		else
+		else{
+			window.onbeforeunload = undefined;
 			return;
+		}
+
+		window.onbeforeunload = SavedDevices.beforeUnload;
 
 
 		this._prepare(options);
@@ -240,6 +244,9 @@ SavedDevices = new Class({ initialize: function(){
 		this._execute(options);
 	}
 });
+SavedDevices.beforeUnload = function(){
+	return "The local database is being updated with your devices. To avoid data corruption, please return to the page and try exiting again in a few seconds.";
+};
 SavedDevices.dbOptions = {
 	name: 'gearbag',
 	version: '1.0',

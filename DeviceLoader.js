@@ -163,8 +163,7 @@ var DeviceLoader = new Class({
 				callback(data);
 			}.bind(this),
 			onTimeout: function(){
-				//if(this.handle.consoleOutput){
-				if(true){
+				if(this.handle.consoleOutput){
 					console.log('Retrying topic download ' + index);
 				}
 				if(--this.remainingRetries == 0)
@@ -192,8 +191,6 @@ var DeviceLoader = new Class({
 				return;
 			}
 
-			console.log('looking for device: ' + topic + " not at index: " + index);
-
 			var func = function(devices){
 				if(this.found.value === true)
 					return;
@@ -202,10 +199,8 @@ var DeviceLoader = new Class({
 
 				for(var i = 0; i < devices.length; i++){
 					var dev = devices[i];
-					console.log('checking: ' + dev.options.topic);
 					if(dev.options.topic == topic){
 						this.found.value = true;
-						console.log('found: ' + topic);
 						callback(dev);
 						return;
 					}
@@ -223,8 +218,6 @@ var DeviceLoader = new Class({
 			this.getDevices(pass.start, pass.count, func.bind(pass));
 
 			var pass = {found: found, calls: calls, start: index + 1, count: span, topic: topic, index: index, callback: callback};
-			if(pass.start < 0)
-				pass.start = 0;
 			this.getDevices(pass.start, pass.count, func.bind(pass));
 
 		}.bind(this));
@@ -348,8 +341,7 @@ var DeviceLoader = new Class({
 			timeout: DeviceLoader.downloadDevicesTimeout,
 			callbackKey: "jsonp",
 			onTimeout: function(){
-				//if(this.handle.consoleOutput){
-					if(true){
+				if(this.handle.consoleOutput){
 					var end = this.startIndex + this.count;
 					console.log('Retrying download ' + this.startIndex + " through " + end);
 				}

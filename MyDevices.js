@@ -11,35 +11,47 @@ var MyDevices = new Class({
 
 			var devs = {value: devices.length};
 			var loadedDevices = [];
-			for(var i = 0; i < devices.length; i++){
-				var pass = {handle:myDevices, databaseDevices: devices, index: i, devicesToGo: devs, loadedDevices: loadedDevices};
-				//	console.log(pass.databaseDevices[i].topic);
-				pass.func = function(device){
-					if(device == null){
-						console.log('Stored device could not be found.\n\tDeviceTopic: ' + this.databaseDevices[this.index].topic + '\n\tDeviceIndex: ' + this.databaseDevices[this.index].deviceIndex);
-					}
-					else{
 
-						this.loadedDevices[this.index] = device;
-					}
-					if( --this.devicesToGo.value == 0 ){
-						for(var i = 0; i < this.loadedDevices.length; i++){
-							dev = this.loadedDevices[i];
-							if(dev === undefined)
-								continue;
+			var func = function(device){
+				if(device == null){
+					console.log('Stored device could not be found.\n\tDeviceTopic: ' + this.databaseDevices[this.index].topic + '\n\tDeviceIndex: ' + this.databaseDevices[this.index].deviceIndex);
+				}
+				else{
+					this.loadedDevices[this.index] = device;
+				}
+				if( --this.devicesToGo.value == 0 ){
+					for(var i = 0; i < this.loadedDevices.length; i++){
+						dev = this.loadedDevices[i];
+						if(dev === undefined)
+							continue;
 
-							if(this.databaseDevices[this.index].deviceIndex != dev.options.index){
-								//console.log("Device has changed index since last visit: " + dev.options.topic + '\n\told index: ' + this.databaseDevices[this.index].deviceIndex +'\n\tnew index: ' + dev.options.index + '\n\tFixing local database..');
-								this.handle.database.updateDeviceIndex(dev.options.topic, dev.options.index);
-							}
-
-							this.handle.addDevice(dev.clone(), false);
-
-							this.handle.deviceLoader.loadImage(dev.options.index, function(){});
+						if(this.databaseDevices[i].deviceIndex != dev.options.index){
+							console.log("Device has changed index since last visit: " + dev.options.topic + '\n\told index: ' + this.databaseDevices[i].deviceIndex +'\n\tnew index: ' + dev.options.index + '\n\tFixing local database..');
+							this.handle.database.updateDeviceIndex(dev.options.topic, dev.options.index);
 						}
+
+						this.handle.addDevice(dev.clone(), false);
+
+						this.handle.deviceLoader.loadImage(dev.options.index, function(){});
 					}
-				}.bind(pass);
-				myDevices.deviceLoader.attemptLoadDevice(devices[i].topic, devices[i].deviceIndex, pass.func);
+				}
+			}
+
+			var PassObj = new Class({
+				initialize: function(index){
+					this.myDevices = myDevices;
+					this.databaseDevices = devices;
+					this.index = index;
+					this.loadedDevices = loadedDevices;
+					this.handle = myDevices;
+					this.devicesToGo = devs;
+				}
+			});
+			for(var i = 0; i < devices.length; i++){
+				var p = new PassObj(i);
+				//	console.log(pass.databaseDevices[i].topic);
+				var f = func.bind(p);
+				myDevices.deviceLoader.attemptLoadDevice(devices[i].topic, devices[i].deviceIndex, f);
 			}
 
 		});
@@ -85,7 +97,7 @@ var MyDevices = new Class({
 		index = this.deviceContainerIndex(device);
 
 		if(index > -1)
-			this.database.addDevice(device.options.topic, index, device.options.index + 1);
+			this.database.addDevice(device.options.topic, index, device.options.index);
 		else
 			console.log('Error: MyDevices.addDevice -- added device but couldn\'t find index in parent');
 	},
