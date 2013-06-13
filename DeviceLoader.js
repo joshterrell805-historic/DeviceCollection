@@ -66,6 +66,8 @@ var DeviceLoader = new Class({
 			return;
 		}
 
+		this.devices[index].loadingImage();
+		
 		var topicRequest = new Request.JSONP({
 			url: DeviceLoader.URL_topicRoot + "/" + topic,
 			method: 'get',

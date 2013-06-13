@@ -10,13 +10,35 @@ div.page{
 	width: 100%;
 	text-align: center;
 }
+div.DevicesContainerVMargin{
+	display: block;
+	text-align: center;
+}
+#devicesContainer{
+	display: inline-block;
+	text-align: center;
+}
+
+div.ContainerTitleDiv{
+	text-align: left;
+	height: 1.5em;
+	position: relative;
+
+}
+	#DeviceDirectoryTitleDiv{
+		height: 2em;
+	}
+	span.ContainerTitleSpan{
+		display: block;
+		position: absolute;
+		bottom: 0;
+	}
 
 
 span.DeviceContainer{
 	border: 1px solid black;
 	display: inline-block;
-	width: 95%;
-	height: 45%;
+	background-color: #EEFFEE;
 	overflow-y: auto;
 	text-align: justify;
 }
@@ -33,7 +55,7 @@ span.Device{
 	margin: 10px;
 	display: block;
 	border: 1px solid #CCCCCC;
-	background-color: #F7F7F7;
+	background-color: #EEEEFF;
 	text-align: center;
 }
 	span.Device_InnerSpan{
@@ -45,7 +67,7 @@ span.Device{
 		height: 72px;
 		text-align: center;
 	}
-		span.Device_NoImage{
+		span.Device_NoImage, span.Device_Loading{
 			font-style: italic;
 			font-size: 60%;
 			line-height: 72px;
@@ -71,7 +93,6 @@ span.Device{
 
 span.PageBrowser{
 	display: inline-block;
-	width: 95%;
 }
 	#jumpSpan{
 		float: left;

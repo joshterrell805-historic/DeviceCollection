@@ -37,18 +37,44 @@ var MyDevices = new Class({
 		});
 
 	},
+	scrollBarEnabled: false,
+	setScrollBarChangeStateCallback: function(callback){
+		this.scrollBarChangeStateCallback = callback;
+	},
+	// pCall - pass false to not call the callback function
+	updateScrollBar: function(pCall){
+		var call = false;
+		var displayed = $(this).scrollHeight > $(this).clientHeight;
+		if(displayed){		
+			if(this.scrollBarEnabled === false)
+				call = true;
+			this.scrollBarEnabled = true;
+		}
+		else{
+			if(this.scrollBarEnabled === true)
+				call = true;
+			this.scrollBarEnabled = false;
+		}
 
+		if(pCall !== false && call === true)
+			this.scrollBarChangeStateCallback(this.scrollBarEnabled);
+	},
 	// if useDatabase is FALSE, the device will be added to the database if it is not already in the container
 	// if useDatabase is unset, useDatabase is assumed TRUE
 	addDevice: function(device, useDatabase){
 		wrapper = this.addDeviceToContainer(device);
+
+		if(wrapper === undefined)
+			return;
+		else{
+			this.updateScrollBar();
+		}
 		
 		if(useDatabase === false)
 			return;
 			
-		if(wrapper === undefined)
-			return;
 
+		index = this.deviceContainerIndex(device);
 
 		if(index > -1)
 			this.database.addDevice(device.options.topic, index, device.options.index);
@@ -61,7 +87,10 @@ var MyDevices = new Class({
 	},
 	startDrag: function(device){
 		// this device is being dragged and has been removed from container
-		if(this.containsWrapper(device.wrapper))
+		if(this.containsWrapper(device.wrapper)){
+			device.wrapper.dispose();
 			this.database.removeDevice(device.options.topic);
+			this.updateScrollBar();
+		}
 	}
 });

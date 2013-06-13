@@ -51,17 +51,39 @@ var Device = new Class({
 			return;
 		this.options.image = image;
 		if(image == null){
-			this.spanImage.text = new Span();
+			if(this.spanImage.text == null){
+				this.spanImage.text = new Span();
+				$(this.spanImage.text).inject($(this.spanImage));
+			}
+
 			$(this.spanImage.text).set('text',"No Image");
-			$(this.spanImage.text).inject($(this.spanImage));
 			$(this.spanImage.text).className = "Device_NoImage";
 		}
 		else{
+			if(this.spanImage.text != null){
+				$(this.spanImage.text).destroy();
+				this.spanImage.text = null;
+			}
+				
+			if(this.spanImage.image != null)
+				this.spanImage.image.destroy();
+
 			this.spanImage.image = image.clone();
 			$(this.spanImage.image).inject($(this.spanImage));
+		}
+	},
+	loadingImage: function(){
+		// don't display "Loading.." if there's already an image
+		if(this.spanImage.image != null)
+			return;
 
+		if(this.spanImage.text == null){
+			this.spanImage.text = new Span();
+			$(this.spanImage.text).inject($(this.spanImage));
 		}
 
+		$(this.spanImage.text).set('text',"Loading");
+		$(this.spanImage.text).className = "Device_Loading";
 	},
 	onStart: function(){
 		myDevices.startDrag(this);

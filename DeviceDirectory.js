@@ -32,7 +32,6 @@ var DeviceDirectory = new Class({
 		}
 	},
 	refresh: function(){
-
 		// calculate devices per page 
 		var dev = new Device({topic:'measure'});
 		var wrapper = this.addDeviceToContainer(dev);
@@ -41,7 +40,13 @@ var DeviceDirectory = new Class({
 
 		var thisSize = $(this).getSize();
 
-		this.devicesPerPage = Math.floor( thisSize.x / size.x ) * Math.floor( thisSize.y / size.y );
+		var devicesPer = {x: Math.floor( thisSize.x / size.x),
+			y: Math.floor( thisSize.y / size.y )};
+
+		var extraSpace = {x: thisSize.x - size.x * devicesPer.x,
+			y: thisSize.y - size.y * devicesPer.y};
+
+		this.devicesPerPage = devicesPer.x * devicesPer.y;
 
 		// load page
 		var pageOf = function(index){
@@ -82,6 +87,7 @@ var DeviceDirectory = new Class({
 	jumpPage: function(page){
 		this.gotoPage(page - 1);
 	},
+	_pagesRequested: 0,
 	gotoPage: function(page){
 
 		if(page < 0)
@@ -103,7 +109,6 @@ var DeviceDirectory = new Class({
 		else if(page > this.totalPages - 1)
 			page = this.totalPages - 1;
 
-		this.clearPage();
 
 		this.page = page;
 		this.pageBrowser.setPage(this.page+1);
@@ -112,9 +117,17 @@ var DeviceDirectory = new Class({
 		var startIndex = this.page*this.devicesPerPage;
 		var count = this.devicesPerPage;
 
+		this.clearPage();
+
+		//if gotoPage is called multiple times before the callback, the callback adds multiple sets of data to the page
+		// to avoid that, only draw the last page requested
+		this._pagesRequested++;
 		this.deviceLoader.getDevices( startIndex, count, this.displayDevices.bind(this));
 	},
 	displayDevices: function(devices){
+		if(--this._pagesRequested != 0)
+			return;
+
 		this.devicesWithoutImages = [];
 
 		for(var i = 0; i < devices.length; i++){
