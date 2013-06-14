@@ -1,6 +1,15 @@
 
+.noSelect {
+	-webkit-user-select: none;  
+	-moz-user-select: none;    
+	-ms-user-select: none;      
+	user-select: none;
+}
+
 .floating-tip{
-	background-color: black;
+	padding: 2px 5px;
+	border-radius: 7px;
+	background-color: #777777;
 	color: white;
 }
 
@@ -50,11 +59,12 @@ div.ContainerTitleDiv{
 */
 
 span.DeviceContainer{
-	border: 1px solid black;
+	border: 1px solid #707070;
 	display: inline-block;
-	background-color: #EEFFEE;
+	background-color: #F0F0F0;
 	overflow-y: auto;
 	text-align: justify;
+	border-radius: 5px;
 }
 #DeviceDirectory{
 	overflow: hidden;
@@ -65,11 +75,12 @@ span.DeviceWrapper{
 }
 
 span.Device{
+	border-radius: 5px;
 	padding: 10px;
 	margin: 10px;
 	display: block;
 	border: 1px solid #CCCCCC;
-	background-color: #EEEEFF;
+	background-color: white;
 	text-align: center;
 }
 	span.Device_InnerSpan{
@@ -81,7 +92,7 @@ span.Device{
 		height: 72px;
 		text-align: center;
 	}
-		span.Device_NoImage, span.Device_Loading{
+		span.Device_NoImage, span.Device_Loading, span.Device_Failed{
 			font-style: italic;
 			font-size: 60%;
 			line-height: 72px;
@@ -95,10 +106,6 @@ span.Device{
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		-webkit-user-select: none;  
-		-moz-user-select: none;    
-		-ms-user-select: none;      
-		user-select: none;
 	}
 
 	span.Device_Spacing{

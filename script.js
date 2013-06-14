@@ -46,6 +46,7 @@ var getScrollBarWidth = function(){
 constructBody = function(){
 	var body = $(document.body);
 	body.setStyle('overflow', 'hidden');
+	body.className = "noSelect";
 
 	page = new Element("Div");
 	page.className = "page";
@@ -59,7 +60,6 @@ constructBody = function(){
 
 	// My Devices / Gear Bag
 	myDevices = new MyDevices(loader,savedDevices);
-	myDevices.setScrollBarChangeStateCallback(resize);
 
 	var titleDiv = new Element("div");
 	titleDiv.className = "ContainerTitleDiv";
@@ -127,53 +127,60 @@ var resize = function(){
 	$(devicesContainer).setStyle("height", "98%");
 
 	var otherUsedY = $(pageBrowser).clientHeight + $(devicesContainer.deviceDirectoryTitleDiv).clientHeight + $(devicesContainer.myDevicesTitleDiv).clientHeight;
-
-	var containerHeight = ($(devicesContainer).clientHeight - otherUsedY)/2;
-
-	$(deviceDirectory).setStyle("width", "100%");
-	$(deviceDirectory).setStyle("height", containerHeight+"px");
-
-	$(myDevices).setStyle("width", "100%");
-	$(myDevices).setStyle("height", containerHeight+"px" );
-
-	myDevices.updateScrollBar(false);
+	var deviceContainerHeight = $(devicesContainer).clientHeight - otherUsedY;
+	var deviceContainerWidth = $(devicesContainer).clientWidth;
 
 	var deviceSize = getDeviceSize();
 
-	var containerSize = $(deviceDirectory).getSize();
+	var rowsAvailable = Math.floor( deviceContainerHeight / deviceSize.y );
+
+	var myDevicesHeight = null;
+	var deviceDirectoryHeight = null;
+
+	var maxDevicesPerRow = Math.floor( deviceContainerWidth / deviceSize.x );
+
+	var myDevRows = Math.ceil( $(myDevices).getChildren().length / maxDevicesPerRow );
+	myDevRows = myDevRows == 0? 1 : myDevRows;
 
 	// with sizes at max, compute how many devices can fit
-	var devicesPer = {x: Math.floor( containerSize.x / deviceSize.x ),
-		y: Math.floor( containerSize.y / deviceSize.y)};
+	if(rowsAvailable == 2){
+		myDevicesHeight = deviceDirectoryHeight = deviceSize.y;
+		var myDevicesRowsUsed = 1;
+	}
+	else{
+		
+		var rowsRemaining = rowsAvailable - myDevRows;
 
-	var extraSpace = {x: containerSize.x - deviceSize.x * devicesPer.x,
-		y: containerSize.y - deviceSize.y * devicesPer.y};
+		if(rowsRemaining <= 0){
+			var myDevicesRowsUsed = rowsAvailable - 1;
+			var devDirRows = 1;
+		}
+		else{
+			var myDevicesRowsUsed = myDevRows;
+			var devDirRows = rowsRemaining;
+		}
 
-	// resize the containers with just enough space to fit the max amount of devices
-	var newSize = {x: containerSize.x - extraSpace.x,
-		y: containerSize.y - extraSpace.y};
+		myDevicesHeight = (myDevicesRowsUsed) * deviceSize.y;
+		deviceDirectoryHeight = devDirRows * deviceSize.y;
+	}
 
-	if(myDevices.scrollBarEnabled)
-		newSize.x += getScrollBarWidth();
+	$(deviceDirectory).setStyle("height", deviceDirectoryHeight);
+	$(myDevices).setStyle("height", myDevicesHeight);
 
-	$(deviceDirectory).setStyle("width", newSize.x);
-	$(myDevices).setStyle("width", newSize.x);
+	var width = maxDevicesPerRow * deviceSize.x + (myDevRows > myDevicesRowsUsed ? getScrollBarWidth() : 0);
+	$(deviceDirectory).setStyle("width", width);
+	$(pageBrowser).setStyle("width", width);
+	$(myDevices).setStyle("width", width);
 
-	$(devicesContainer).setStyle("width", newSize.x);
-	$(pageBrowser).setStyle("width", newSize.x);
-
-	var margin = ($(devicesContainer).clientWidth - newSize.x)/2;
-	$(devicesContainer.myDevicesTitleDiv).setStyle("width", newSize.x);
+	var margin = ( deviceContainerWidth - width)/2;
+	$(devicesContainer.myDevicesTitleDiv).setStyle("width", width);
 	$(devicesContainer.myDevicesTitleDiv).setStyle("margin-left", margin);
 
-	$(devicesContainer.deviceDirectoryTitleDiv).setStyle("width", newSize.x);
+	$(devicesContainer.deviceDirectoryTitleDiv).setStyle("width", width);
 	$(devicesContainer.deviceDirectoryTitleDiv).setStyle("margin-left", margin);
 
 	otherUsedY = $(pageBrowser).clientHeight + $(devicesContainer.deviceDirectoryTitleDiv).clientHeight + $(devicesContainer.myDevicesTitleDiv).clientHeight;
-	$(devicesContainer).setStyle("height", newSize.y * 2 + otherUsedY);
-
-	$(deviceDirectory).setStyle("height", newSize.y);
-	$(myDevices).setStyle("height", newSize.y);
+	$(devicesContainer).setStyle("height", myDevicesHeight + deviceDirectoryHeight + otherUsedY);
 
 	var marginHeight = ($(page).clientHeight - $(devicesContainer).clientHeight) / 2;
 	devicesContainer.margins[0].setStyle("height",  marginHeight);

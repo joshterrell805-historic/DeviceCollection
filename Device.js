@@ -66,8 +66,11 @@ var Device = new Class({
 		return this.wrapper;
 	},
 
+
 	setImage: function(image){
-		if(image === undefined)
+
+		// no parameter or image already been set
+		if(image === undefined || this.spanImage.image != undefined)
 			return;
 
 
@@ -111,9 +114,19 @@ var Device = new Class({
 		this.options.image = image;
 	},
 
+	
+	failedDownload: function(){
+		if(this.spanImage.text == null){
+			this.spanImage.text = new Span();
+			$(this.spanImage.text).inject($(this.spanImage));
+		}
+
+		$(this.spanImage.text).set('text',"Failed");
+		$(this.spanImage.text).className = "Device_Failed";
+	},
+
 	// display "Loading.."
 	loadingImage: function(){
-
 		if(this.spanImage.text == null){
 			this.spanImage.text = new Span();
 			$(this.spanImage.text).inject($(this.spanImage));
@@ -121,6 +134,7 @@ var Device = new Class({
 
 		$(this.spanImage.text).set('text',"Loading..");
 		$(this.spanImage.text).className = "Device_Loading";
+
 	},
 
 	onStart: function(){

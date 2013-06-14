@@ -151,49 +151,52 @@ var DeviceLoader = new Class({
 		this._getDevices.checkQueue();
 	},
 
+	_getBlock: function(block, callback){
+		var startIndex = block[0];
+		var count = block.length;
+		this._downloadDevices(startIndex, count, callback);
+	},
+
 	_realGetDevices: function(request){
 		var requestsToGo = {count: request.blocks.length};
 
-		// download all blocks
-		for(var i = 0; i < requestsToGo.count; i++){
+		var func = function(devices){
 
-			var pass = {handle: this, requestsToGo: requestsToGo, blocks: request.blocks, thisBlock: i};
+			var block = this.blocks[this.thisBlock];
 
-			pass.func = function(devices){
-
-				var block = this.blocks[this.thisBlock];
-
-				if(devices === null){
-					if(this.handle.consoleErrorOutput);
-						alert('Critical Error: Failed to download devices\nSee javascript console for more information and try refreshing later');
-				}
-				else{
-					for(var j = 0; j < devices.length; j++){
-						/*
-							Was used when calls to get devices were not in a queue. Keeping here just incase the desire to switch out of queue mode arises.
-
-							if(this.handle.devices[block[j]] !== undefined)
-								continue;
-
-						*/
-
-						devices[j].options.index = block[j];
-						this.handle.devices[ block[j] ] = devices[j];
+			if(devices === null){
+				if(this.handle.consoleErrorOutput);
+				{
+					var message = 'Error: Failed to download device' + (block.length==1? ': ' + block[0] : 's: ' + block[0] + ' through ' + block[block.length-1]);
+					console.log(message);
+					if(this.handle.hasAlerted === undefined){
+						alert('Critical Error: failed to download some devices. Check javascript console for more information');
+						this.handle.hasAlerted = true;
 					}
 				}
-
-				if(--this.requestsToGo.count == 0){
-					this.handle._getDevices.downloading = false;
-					this.handle._returnDevices(request.start, request.count, request.callback);
-					this.handle._getDevices.checkQueue();
+			}
+			else{
+				for(var j = 0; j < devices.length; j++){
+					if(this.handle.devices[block[j]] !== undefined)
+						continue;
+					devices[j].options.index = block[j];
+					this.handle.devices[ block[j] ] = devices[j];
 				}
+			}
 
-			}.bind(pass);
+			if(--this.requestsToGo.count == 0){
+				this.handle._getDevices.downloading = false;
+				this.handle._returnDevices(request.start, request.count, request.callback);
+				this.handle._getDevices.checkQueue();
+			}
 
-			var startIndex = request.blocks[i][0];
-			var count = request.blocks[i].length;
-			this._downloadDevices(startIndex, count, pass.func);
+		};
 
+		// download all blocks
+		for(var i = 0; i < requestsToGo.count; i++){
+			var pass = {handle: this, requestsToGo: requestsToGo, blocks: request.blocks, thisBlock: i};
+			pass.func = func.bind(pass);
+			this._getBlock(request.blocks[i], pass.func);
 		}
 
 	},
@@ -221,7 +224,7 @@ var DeviceLoader = new Class({
 					var end = this.startIndex + this.count;
 					console.log('Retrying download ' + this.startIndex + " through " + end);
 				}
-				if(--this.remainingRetries == 0)
+				if(--this.remainingRetries <= 0)
 					this.callback(null);
 				else
 					this.handle._downloadDevices(this.startIndex, this.count, this.callback, this);
@@ -275,6 +278,7 @@ var DeviceLoader = new Class({
 	// callback has signature function( image )
 	// image is the loaded image Element
 	// index is the index of the device whose image needs loading
+// console
 	getImage: function(index, callback){
 
 		var device = this._getDevice(index);
@@ -291,7 +295,6 @@ var DeviceLoader = new Class({
 
 			topic = device.options.topic;
 		}
-
 		// requested image of unloaded device
 		else{
 			if(this.consoleErrorOutput)
@@ -301,17 +304,18 @@ var DeviceLoader = new Class({
 			return;
 		}
 
+
 		this.executeOnAllDeviceInstances( this.devices[index], Device.prototype.loadingImage );
 
 		this._downloadTopic(topic, index, function(data){
-			if(data === null ){
-				if(this.consoleErrorOutput)
-					console.log('Failed to download topic: ' + index);
+			var device = this.devices[index];
+
+			if(data == "timeout"){
+				this.executeOnAllDeviceInstances(device, Device.prototype.failedDownload);
+				callback(null);
 			}
 			else{
 				this._downloadImage(data, function(image){
-
-					var device = this.devices[index];
 
 					this.executeOnAllDeviceInstances(device, Device.prototype.setImage, image);
 
@@ -339,9 +343,9 @@ var DeviceLoader = new Class({
 	_downloadTopic: function(topic, index, callback, timeoutObj){
 
 		if(timeoutObj === undefined)
-			timeoutObj = {topicRequest: null, handle: this, remainingRetries: DeviceLoader.downloadTopicTimeoutRetry, index: index, callback: callback};
+			timeoutObj = {topicRequest: null, handle: this, remainingRetries: DeviceLoader.downloadTopicTimeoutRetry, index: index, topic: topic, callback: callback};
 		
-		var topicRequest = new Request.JSONP({
+		timeoutObj.topicRequest = new Request.JSONP({
 			url: DeviceLoader.URL_topicRoot + "/" + topic,
 			method: 'get',
 			timeout: DeviceLoader.downloadTopicTimeout,
@@ -351,16 +355,16 @@ var DeviceLoader = new Class({
 					console.log('Exception with header -- ' + headerName + ': ' + value);
 			}.bind(this),
 			onComplete: function(data){
-				callback(data);
-			}.bind(this),
+				this.callback(data);
+			}.bind(timeoutObj),
 			onTimeout: function(){
 				if(this.handle.consoleOutput)
 					console.log('Retrying topic download ' + index);
 
-				if(--this.remainingRetries == 0)
-					this.callback(null);
+				if(--this.remainingRetries <= 0)
+					this.callback("timeout");
 				else
-					this.handle._downloadTopic(this.startIndex, this.count, this.callback, this);
+					this.handle._downloadTopic(this.topic, this.index, this.callback, this);
 			}.bind(timeoutObj),
 			onRequest: function(url, script){
 				if(this.consoleOutput)
@@ -372,7 +376,7 @@ var DeviceLoader = new Class({
 			}.bind(this)
 		});
 
-		topicRequest.send();
+		timeoutObj.topicRequest.send();
 	},
 
 	_downloadImage: function(data, callback){
@@ -407,97 +411,22 @@ var DeviceLoader = new Class({
 				continue;
 
 			if(dev.equals(device))
-				func.bind(device, pass)();
+				func.bind(dev, pass)();
 
 		}
 
-		if(window.draggedDevice !== undefined && window.draggedDevice.handle !== device && window.draggedDevice.handle.equals(device))
-			func.bind(draggedDevice.handle, pass)();
+		var devices = $(document.body).getElements('span.Device');
 
-		children = $(deviceDirectory).getChildren();
-		for( var i = 0; i < children.length; i++){
-			var dev = children[i].handle;
-
+		for( var i = 0; i < devices.length; i++){
+			var dev = devices[i].handle;
 			if(dev === device)
 				continue;
 
 			if(dev.equals(device))
 				func.bind(dev, pass)();
-		}
 
-		children = $(myDevices).getChildren();
-		for( var i = 0; i < children.length; i++){
-			var dev = children[i].handle;
-
-			if(dev === device)
-				continue;
-
-			if(dev.equals(device))
-				func.bind(dev, pass)();
 		}
 	},
-	
-	zexecuteOnAllDeviceInstances: function(device, func, pass){
-		var bPass = false;
-
-		if(pass !== undefined)
-			bPass = true;
-
-		if(bPass)
-			func.bind(device, pass)();
-		else
-			func.bind(device)();
-
-		for(var i = 0; i < this.devices.length; i++){
-			var dev = this.devices[i];
-			if(dev === undefined)
-				continue;
-			if(dev === device)
-				continue;
-			if(dev.equals(device)){
-				if(bPass)
-					func.bind(device, pass)();
-				else
-					func.bind(device)();
-			}
-
-		}
-		if(window.draggedDevice !== undefined && window.draggedDevice.handle !== device && window.draggedDevice.handle.equals(device)){
-			if(bPass)
-				func.bind(draggedDevice.handle, pass)();
-			else
-				func.bind(draggedDevice.handle)();
-		}
-
-		children = $(deviceDirectory).getChildren();
-		for( var i = 0; i < children.length; i++){
-			var dev = children[i].handle;
-			if(dev === device)
-				continue;
-			if(dev.equals(device)){
-				if(bPass){
-					func.bind(dev, pass)();
-				}
-				else
-					func.bind(dev)();
-			}
-		}
-
-		children = $(myDevices).getChildren();
-		for( var i = 0; i < children.length; i++){
-			var dev = children[i].handle;
-			if(dev === device)
-				continue;
-			if(dev.equals(device)){
-				if(bPass)
-					func.bind(dev, pass)();
-				else
-					func.bind(dev)();
-			}
-		}
-
-	},
-
 	attemptLoadDevice: function(topic, index, callback){
 
 		this.getDevices(index, 1, function(devices){

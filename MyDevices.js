@@ -9,15 +9,13 @@ var MyDevices = new Class({
 		this.loadSavedDevices();
 	},
 
-	scrollBarEnabled: false,
+	loadingDevices: false,
 
 	loadSavedDevices: function(){
+		this.loadingDevices = true;
 
 		this.database.getDevices(function(devices){
-
 			var devs = {value: devices.length};
-
-			var loadedDevices = [];
 
 			var func = function(device){
 
@@ -26,82 +24,64 @@ var MyDevices = new Class({
 						this.databaseDevices[this.index].topic + '\n\tDeviceIndex: ' + 
 						this.databaseDevices[this.index].deviceIndex);
 				}
-				else
-					this.loadedDevices[this.index] = device;
-				if( --this.devicesToGo.value == 0 ){
+				else{
+					this.handle.addDatabaseDevice(device.clone());
+					if(this.databaseDevices[this.index].deviceIndex != device.options.index){
+						console.log("Device has changed index since last visit: " + 
+							device.options.topic + '\n\told index: ' + this.databaseDevices[this.index].deviceIndex +
+							'\n\tnew index: ' + device.options.index + '\n\tFixing local database..');
 
-					for(var i = 0; i < this.loadedDevices.length; i++){
-						dev = this.loadedDevices[i];
-
-						if(dev === undefined)
-							continue;
-
-						if(this.databaseDevices[i].deviceIndex != dev.options.index){
-
-							console.log("Device has changed index since last visit: " + 
-								dev.options.topic + '\n\told index: ' + this.databaseDevices[i].deviceIndex +
-								'\n\tnew index: ' + dev.options.index + '\n\tFixing local database..');
-
-							this.handle.database.updateDeviceIndex(dev.options.topic, dev.options.index);
-						}
-
-						this.handle.addDevice(dev.clone(), false);
-
-						this.handle.deviceLoader.getImage(dev.options.index, function(){});
+						this.handle.database.updateDeviceIndex(device.options.topic, device.options.index);
 					}
+					this.handle.deviceLoader.getImage(device.options.index, function(){});
 				}
+
+				if(--this.remainingDevices.value == 0)
+					this.handle.loadingDevices = false;
 			}
 
+			if(devices.length == 0)
+				this.loadingDevices = false;
 
 			for(var i = 0; i < devices.length; i++){
-				var p = {handle: myDevices, index: i, devicesToGo: devs, loadedDevices: loadedDevices, databaseDevices: devices};
+				var p = {handle: myDevices, index: i, databaseDevices: devices, remainingDevices: devs};
 				myDevices.deviceLoader.attemptLoadDevice(devices[i].topic, devices[i].deviceIndex, func.bind(p));
 			}
 
-		});
+		}.bind(this));
 	},
 
-	setScrollBarChangeStateCallback: function(callback){
-		this.scrollBarChangeStateCallback = callback;
+	addDatabaseDevice: function(device){
+		this._addDevice(device);
 	},
 
-	// pCall - pass false to not call the callback function
-	updateScrollBar: function(pCall){
+	_addDevice:function(device){
+		var wrapper = this.addDeviceToContainer(device);
 
-		var call = false;
-
-		var displayed = $(this).scrollHeight > $(this).clientHeight;
-
-		if(displayed){		
-			if(this.scrollBarEnabled === false)
-				call = true;
-
-			this.scrollBarEnabled = true;
-		}
-		else{
-			if(this.scrollBarEnabled === true)
-				call = true;
-
-			this.scrollBarEnabled = false;
-		}
-
-		if(pCall !== false && call === true)
-			this.scrollBarChangeStateCallback(this.scrollBarEnabled);
-	},
-
-	// if useDatabase is FALSE, the device will be added to the database if it is not already in the container
-	// if useDatabase is unset, useDatabase is assumed TRUE
-	addDevice: function(device, useDatabase){
-		wrapper = this.addDeviceToContainer(device);
-
+		// duplicate device, didn't add
 		if(wrapper === undefined)
-			return;
-		else
-			this.updateScrollBar();
-		
-		if(useDatabase === false)
-			return;
+			return false;
+			
+		resize();
+	},
 
+	addDevice: function(device){
+		if(this.loadingDevices){
+			if(this.loadingMessage === undefined){
+				this.loadingMessage = new Purr({
+					mode: 'top',
+					position: 'center'
+				});
+			}
+
+			this.loadingMessage.alert('Please wait until your Gear Bag has finished loading');
+			return;
+		}
+
+		// duplicate device
+		if(this._addDevice(device) === false)
+			return;
+		
 		index = this.deviceContainerIndex(device);
 
 		if(index > -1)
@@ -121,7 +101,7 @@ var MyDevices = new Class({
 		if(this.containsWrapper(device.wrapper)){
 			device.wrapper.dispose();
 			this.database.removeDevice(device.options.topic);
-			this.updateScrollBar();
+			resize();
 		}
 	}
 
