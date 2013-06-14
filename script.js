@@ -1,6 +1,8 @@
 var getScrollBarWidth = function(){
+
 	if(getScrollBarWidth.width !== undefined)
 		return getScrollBarWidth.width;
+
 	var innerDiv = new Element("div", {
 		styles:{
 			display: 'inline-block',
@@ -8,6 +10,7 @@ var getScrollBarWidth = function(){
 			width: '200px'
 		}
 	});
+
 	var div1 = new Element("div", {
 		styles:{
 			display: 'inline-block',
@@ -15,6 +18,7 @@ var getScrollBarWidth = function(){
 			'overflow-y': 'auto'
 		}
 	});
+
 	var div2 = new Element("div",{
 		styles:{
 			display: 'inline-block',
@@ -25,6 +29,7 @@ var getScrollBarWidth = function(){
 
 	$(innerDiv).clone().inject($(div1));
 	$(innerDiv).inject($(div2));
+
 	$(div1).inject($(document.body));
 	$(div2).inject($(document.body));
 
@@ -34,6 +39,7 @@ var getScrollBarWidth = function(){
 	$(div2).destroy();
 
 	getScrollBarWidth.width = width;
+
 	return width;
 }
 
@@ -47,32 +53,36 @@ constructBody = function(){
 	devicesContainer = new Element("div");
 	devicesContainer.id = "devicesContainer";
 
-	pageBrowser = new PageBrowser();
+	
 	var loader = new DeviceLoader();
 	var savedDevices = new SavedDevices();
 
+	// My Devices / Gear Bag
 	myDevices = new MyDevices(loader,savedDevices);
 	myDevices.setScrollBarChangeStateCallback(resize);
-	deviceDirectory = new DeviceDirectory(loader,pageBrowser);
-
-	pageBrowser.setCallbackContainer(deviceDirectory);
 
 	var titleDiv = new Element("div");
 	titleDiv.className = "ContainerTitleDiv";
 	devicesContainer.myDevicesTitleDiv = titleDiv;
+
 	var titleSpan = new Element('span');
 	titleSpan.className = "ContainerTitleSpan";
 	titleSpan.set("text", 'Gear Bag');
 	$(titleSpan).inject(titleDiv);
 
 	$(titleDiv).inject(devicesContainer);
-
 	$(myDevices).inject(devicesContainer);
+	
+	// Device Directory
+	pageBrowser = new PageBrowser();
+	deviceDirectory = new DeviceDirectory(loader,pageBrowser);
+	pageBrowser.setCallbackContainer(deviceDirectory);
 
 	titleDiv = new Element("div");
 	titleDiv.className = "ContainerTitleDiv";
 	titleDiv.id = "DeviceDirectoryTitleDiv";
 	devicesContainer.deviceDirectoryTitleDiv = titleDiv;
+
 	titleSpan = new Element('span');
 	titleSpan.className = "ContainerTitleSpan";
 	titleSpan.set("text", 'Device Directory');
@@ -83,30 +93,36 @@ constructBody = function(){
 	$(pageBrowser).inject(devicesContainer);
 
 
+	// Devices Container & Top and Bottom Margins
 	devicesContainer.margins = [];
+
 	var marg = new Element("div");
 	marg.className = "DevicesContainerVMargin";
-	$(marg).inject(page);
-
 	devicesContainer.margins.push(marg);
 
+	// push top marg
+	$(marg).inject(page);
+
+	// then container
 	$(devicesContainer).inject(page);
 
 	var marg = new Element("div");
 	marg.className = "DevicesContainerVMargin";
-	$(marg).inject(page);
-
 	devicesContainer.margins.push(marg);
 
+	// then bottom marg
+	$(marg).inject(page);
 
 	
 	page.inject(body);
+
 	window.addEvent('resize', resize );
 	window.addEvent('domready', resize );
 }
 
 var resize = function(){
 
+	// set all sizes to max
 	$(devicesContainer).setStyle("width", "95%");
 	$(devicesContainer).setStyle("height", "98%");
 
@@ -126,12 +142,14 @@ var resize = function(){
 
 	var containerSize = $(deviceDirectory).getSize();
 
+	// with sizes at max, compute how many devices can fit
 	var devicesPer = {x: Math.floor( containerSize.x / deviceSize.x ),
 		y: Math.floor( containerSize.y / deviceSize.y)};
 
 	var extraSpace = {x: containerSize.x - deviceSize.x * devicesPer.x,
 		y: containerSize.y - deviceSize.y * devicesPer.y};
 
+	// resize the containers with just enough space to fit the max amount of devices
 	var newSize = {x: containerSize.x - extraSpace.x,
 		y: containerSize.y - extraSpace.y};
 
@@ -161,11 +179,12 @@ var resize = function(){
 	devicesContainer.margins[0].setStyle("height",  marginHeight);
 	devicesContainer.margins[1].setStyle("height", marginHeight);
 
-
-	 deviceDirectory.refresh();
+	// refresh incase less or more devices, might need to page change
+	deviceDirectory.refresh();
 }
 
 var getDeviceSize = function(){
+
 	if(getDeviceSize.size == undefined){
 		var dev = new Device({topic:'Measure', categories: []});
 		var wrapper = deviceDirectory.addDeviceToContainer(dev);

@@ -1,23 +1,45 @@
 var PageBrowser = new Class({
+
 	Extends: Span,
+
 	initialize: function(){
-		//var callbackContainer = null;
-		//this.setCallbackContainer(callbackContainer);
 		this.parent();
+		$(this).className =  'PageBrowser';
 
 		this.initInnerElements();
-		$(this).className =  'PageBrowser';
 	},
+
+	onNext: function(){
+		if(this.pagedContainer != null)
+			this.pagedContainer.nextPage();
+	},
+
+	onPrev: function(){
+		if(this.pagedContainer != null)
+			this.pagedContainer.prevPage();
+	},
+
+	onJump: function(page){
+		if(this.pagedContainer != null)
+			this.pagedContainer.jumpPage(page);
+	},
+
 	setTotalPages: function(num){
 		this.pageOfSpan.setTotalPages(num);
 	},
+
 	setPage: function(num){
 		this.pageOfSpan.setPage(num);
 	},
+
 	setCallbackContainer: function(callbackContainer){
 		this.pagedContainer = callbackContainer;
 	},
+
 	initInnerElements: function(){
+
+		// ------ jump --------
+
 		var jumpSpan = new Span();
 		$(jumpSpan).id = 'jumpSpan';
 
@@ -43,13 +65,27 @@ var PageBrowser = new Class({
 
 		this.pageInput = jumpSpan.input;
 
+
 		$(jumpSpan.input).inject($(jumpSpan));
 		$(jumpSpan.button).inject($(jumpSpan));
 
-		// this.pageOfSpan
+
+		// ------ page of --------
+
 		// has methods: setPage(num), setTotalPages(num)
 		this.pageOfSpan = new Span();
 		$(this.pageOfSpan).id = 'pageOf';
+
+		this.pageOfSpan.setPage = function(num){
+			// assume num is valid number
+			$(this.page).set('text', num);
+		}.bind(this.pageOfSpan);
+
+		this.pageOfSpan.setTotalPages = function(num){
+			// assume num is valid nubmer
+			$(this.totalPages).set('text', num);
+		}.bind(this.pageOfSpan);
+
 		var s = new Span();
 		$(s).set('text', 'Page ');
 		$(s).inject($(this.pageOfSpan));
@@ -64,17 +100,9 @@ var PageBrowser = new Class({
 		this.pageOfSpan.totalPages = new Span();
 		$(this.pageOfSpan.totalPages).inject($(this.pageOfSpan));
 
-		this.pageOfSpan.setPage = function(num){
-			// assume num is valid number
-			$(this.page).set('text', num);
-		}.bind(this.pageOfSpan);
 
-		this.pageOfSpan.setTotalPages = function(num){
-			// assume num is valid nubmer
-			$(this.totalPages).set('text', num);
-		}.bind(this.pageOfSpan);
+		// ------ next & prev --------
 
-		// nextPrev span
 		var nextPrevSpan = new Span();
 		$(nextPrevSpan).id = 'nextPrev';
 
@@ -85,6 +113,7 @@ var PageBrowser = new Class({
 				click: PageBrowser.prototype.onPrev.bind(this)
 			}
 		});
+
 		var next = new Element("input", {
 			type: 'button',
 			value: 'Next',
@@ -96,27 +125,16 @@ var PageBrowser = new Class({
 		$(prev).inject($(nextPrevSpan));
 		$(next).inject($(nextPrevSpan));
 
+		// ------ pageof + next & prev --------
+
 		var pageOfAndNextPrevSpan = new Span();
 		$(pageOfAndNextPrevSpan).id = 'pageOfAndNextPrev';
-
 		$(this.pageOfSpan).inject($(pageOfAndNextPrevSpan));
 		$(nextPrevSpan).inject($(pageOfAndNextPrevSpan));
 
+
 		$(jumpSpan).inject($(this));
 		$(pageOfAndNextPrevSpan).inject($(this));
-
-	},
-	onNext: function(){
-		if(this.pagedContainer != null)
-			this.pagedContainer.nextPage();
-	},
-	onPrev: function(){
-		if(this.pagedContainer != null)
-			this.pagedContainer.prevPage();
-	},
-	onJump: function(page){
-		if(this.pagedContainer != null)
-			this.pagedContainer.jumpPage(page);
 	}
 
 });

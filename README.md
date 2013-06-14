@@ -1,8 +1,8 @@
 DeviceCollection
 ================
 
-Select and locally save a collection of owned devices
+Select and locally save a collection of owned devices from ifixit.com
 
-Author: Josh Terrell
+Drag devices from DeviceContainer to Gear Bag to save the device to your collection.
 
-New Line
+Reload the page at anytime to see your devices.

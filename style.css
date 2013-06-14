@@ -3,6 +3,7 @@
 	background-color: black;
 	color: white;
 }
+
 #body{
 	margin: 0;
 }
@@ -14,10 +15,12 @@ div.page{
 	width: 100%;
 	text-align: center;
 }
+
 div.DevicesContainerVMargin{
 	display: block;
 	text-align: center;
 }
+
 #devicesContainer{
 	display: inline-block;
 	text-align: center;
@@ -32,12 +35,19 @@ div.ContainerTitleDiv{
 	#DeviceDirectoryTitleDiv{
 		height: 2em;
 	}
+
 	span.ContainerTitleSpan{
 		display: block;
 		position: absolute;
 		bottom: 0;
 	}
 
+
+/*
+
+	Width and height is set pragmatically in resize method of script.js
+
+*/
 
 span.DeviceContainer{
 	border: 1px solid black;
