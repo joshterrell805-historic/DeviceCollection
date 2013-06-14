@@ -44,6 +44,9 @@ var getScrollBarWidth = function(){
 }
 
 constructBody = function(){
+	if(Browser.chrome !== true)
+		alert('This application utilizes some tools only available to some browsers. Try opening this page in Google Chrome for full functionality');
+
 	var body = $(document.body);
 	body.setStyle('overflow', 'hidden');
 	body.className = "noSelect";
@@ -113,8 +116,26 @@ constructBody = function(){
 	// then bottom marg
 	$(marg).inject(page);
 
-	
 	page.inject(body);
+
+
+	// full screen image only visible in non-fullscreen mode
+	// (because page gets fullscreened, not body)
+	fullScreenImage = new Element("img",{
+		src: "FullScreen.png",
+		id: "Fullscreen_Image",
+		events:{
+			click: function(){ $(page).webkitRequestFullScreen(); }
+		}
+	});
+	fullScreenImage.tips = new FloatingTips($(fullScreenImage), {
+		position: 'right',
+		content: function(elm){
+			return "Go to Fullscreen mode";
+		}
+	});
+
+	$(fullScreenImage).inject(body);
 
 	window.addEvent('resize', resize );
 	window.addEvent('domready', resize );

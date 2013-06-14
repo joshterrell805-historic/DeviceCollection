@@ -1,4 +1,12 @@
 
+#Fullscreen_Image{
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 40px;
+	height: 30px
+}
+
 .noSelect {
 	-webkit-user-select: none;  
 	-moz-user-select: none;    

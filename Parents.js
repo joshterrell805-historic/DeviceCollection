@@ -26,10 +26,9 @@ var DeviceContainer = new Class({
 
 	addDeviceToContainer: function(device){
 
-		if(this.containsDevice(device)){
-			console.log('attempted to add duplicate device');
+		// duplicate device, return undefined
+		if(this.containsDevice(device))
 			return ;
-		}
 
 		var wrapper = device.wrapDevice();
 
