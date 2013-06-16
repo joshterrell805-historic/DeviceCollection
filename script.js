@@ -125,7 +125,7 @@ constructBody = function(){
 		src: "FullScreen.png",
 		id: "Fullscreen_Image",
 		events:{
-			click: function(){ $(page).webkitRequestFullScreen(); }
+			click: function(){ $(page).webkitRequestFullScreen(DomElement.ALLOW_KEYBOARD_INPUT); }
 		}
 	});
 	fullScreenImage.tips = new FloatingTips($(fullScreenImage), {
@@ -145,7 +145,8 @@ var resize = function(){
 
 	// set all sizes to max
 	$(devicesContainer).setStyle("width", "95%");
-	$(devicesContainer).setStyle("height", "98%");
+	// devicesContainer gets page height - the room neeeded for the fullscreen button (top and bottom for centered appearance)
+	$(devicesContainer).setStyle("height", $(page).clientHeight - 2*$(fullScreenImage).clientHeight);
 
 	var otherUsedY = $(pageBrowser).clientHeight + $(devicesContainer.deviceDirectoryTitleDiv).clientHeight + $(devicesContainer.myDevicesTitleDiv).clientHeight;
 	var deviceContainerHeight = $(devicesContainer).clientHeight - otherUsedY;

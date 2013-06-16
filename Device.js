@@ -30,6 +30,11 @@ var Device = new Class({
 			Device.tips = new FloatingTips($(this), {
 				content: function(devWrapper){ 
 					return devWrapper.handle.options.topic;
+				},
+				onShow: function(tip){
+					// put the tip in the page instead of body, because in fullscreen body is not visible
+					$(tip).dispose();
+					$(tip).inject($(page));
 				}
 			});
 		}
@@ -143,8 +148,8 @@ var Device = new Class({
 
 		$(this.wrapper).dispose();
 
-		$(this).setStyle('position', 'absolute');
-		$(this).inject($(document.body));
+		$(this).setStyle('position', 'fixed');
+		$(this).inject($(page));
 
 		window.draggedDevice = $(this);
 	},
